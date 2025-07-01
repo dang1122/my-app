@@ -83,7 +83,7 @@ class AttendanceController extends GetxController with SettingsMixin {
           "method": "SELECT",
           "target": "*",
           "table": "students",
-          "where": "lrn!='null'",
+          "where": "incharge='$userId'",
           "token": "sdaesi",
         });
     print("res ${res.body}");
@@ -103,7 +103,7 @@ class AttendanceController extends GetxController with SettingsMixin {
         "method": "SELECT",
         "target": "*",
         "table": "checkins",
-        "where": "scan_date='$today'", // incharge=$userId AND
+        "where": "scan_date='$today'", // incharge='$userId' AND
         "token": "sdaesi",
       },
     );
