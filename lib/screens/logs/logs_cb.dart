@@ -64,7 +64,7 @@ class AttendanceController extends GetxController with SettingsMixin {
       // First, get all students
       await _fetchAllStudents(userId);
 
-      // Then, get check-in data for today
+      // Then, get check-in data for selected date
       await _fetchCheckInData(userId);
 
       // Process and combine the data
@@ -78,14 +78,16 @@ class AttendanceController extends GetxController with SettingsMixin {
   }
 
   Future<void> _fetchAllStudents(int userId) async {
-    var res = await GetConnect()
-        .post("${AppStrings.baseUrl}student_checkin/api.php", {
-          "method": "SELECT",
-          "target": "*",
-          "table": "students",
-          "where": "incharge='$userId'",
-          "token": "sdaesi",
-        });
+    var res = await GetConnect().post(
+      "${AppStrings.baseUrl}student_checkin/api.php",
+      {
+        "method": "SELECT",
+        "target": "*",
+        "table": "students",
+        "where": "lrn!='null'", // incharge='$userId'
+        "token": "sdaesi",
+      },
+    );
     print("res ${res.body}");
 
     if (res.statusCode == 200 && res.body != null) {
@@ -95,22 +97,22 @@ class AttendanceController extends GetxController with SettingsMixin {
   }
 
   Future<void> _fetchCheckInData(int userId) async {
-    String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-
     var res = await GetConnect().post(
       "${AppStrings.baseUrl}student_checkin/api.php",
       {
         "method": "SELECT",
         "target": "*",
         "table": "checkins",
-        "where": "scan_date='$today'", // incharge='$userId' AND
+        "where": "scan_date='${selectedDate.value}'", // incharge='$userId' AND
         "token": "sdaesi",
       },
     );
 
     if (res.statusCode == 200 && res.body != null) {
       _checkInData.value = res.body['data'] ?? [];
-      print('Fetched ${_checkInData.length} check-in records for today');
+      print(
+        'Fetched ${_checkInData.length} check-in records for ${selectedDate.value}',
+      );
     }
   }
 
@@ -118,13 +120,11 @@ class AttendanceController extends GetxController with SettingsMixin {
     _allStudents.clear();
     DateTime now = DateTime.now();
     bool isAfter6PM = now.hour >= 18; // 6 PM check
-    String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
     // Create a map of check-in data for quick lookup
     Map<String, dynamic> checkInMap = {};
     for (var checkIn in _checkInData) {
       String studentKey = '${checkIn['lrn']}';
-
       checkInMap[studentKey] = checkIn;
     }
 
@@ -139,7 +139,6 @@ class AttendanceController extends GetxController with SettingsMixin {
       int studentId = student['id'] ?? i;
 
       // Morning session
-      print("checkin: ${checkInRecord}");
       String morningStatus = _determineMorningStatus(checkInRecord, isAfter6PM);
       _allStudents.add(
         Student(
@@ -147,7 +146,7 @@ class AttendanceController extends GetxController with SettingsMixin {
           name: studentName,
           grade: grade,
           session: 'Morning',
-          date: today,
+          date: selectedDate.value,
           status: morningStatus,
         ),
       );
@@ -163,13 +162,22 @@ class AttendanceController extends GetxController with SettingsMixin {
           name: studentName,
           grade: grade,
           session: 'Afternoon',
-          date: today,
+          date: selectedDate.value,
           status: afternoonStatus,
         ),
       );
     }
 
     print('Processed ${_allStudents.length} attendance records');
+  }
+
+  Future<void> fetchLogs() async {
+    User user = User.fromJson(
+      jsonDecode((await SharedPreferences.getInstance()).getString('user')!),
+    );
+    await _fetchCheckInData(int.parse(user.id));
+    _processAttendanceData();
+    _filterStudents();
   }
 
   String _determineMorningStatus(dynamic checkInRecord, bool isAfter6PM) {

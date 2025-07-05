@@ -162,7 +162,6 @@ class ScannerController extends GetxController with SettingsMixin {
   }
 
   Future<bool> triggerSMS(name, number) async {
-    print(timing.value);
     final Telephony telephony = Telephony.instance;
     listener(SendStatus status) async {
       if (status == SendStatus.SENT) {
@@ -199,7 +198,7 @@ class ScannerController extends GetxController with SettingsMixin {
       "$greeting, Student $name has $action the school premises at $hour:$minute $period. ${timing.value.contains("in") ? "Please ensure safe entry." : "Exit confirmed."}",
     );
     telephony.sendSms(to: number, message: message, statusListener: listener);
-
+    await Future.delayed(Duration(seconds: 3));
     return true;
   }
 }

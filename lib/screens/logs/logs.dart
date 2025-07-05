@@ -294,6 +294,7 @@ class Attendance extends GetView<AttendanceController> {
                     controller.selectedDate.value = DateFormat(
                       'yyyy-MM-dd',
                     ).format(date);
+                    controller.fetchLogs();
                   }
                 },
                 child: Row(
